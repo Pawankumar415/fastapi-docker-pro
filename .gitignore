@@ -1,0 +1,17 @@
+# Environment and Secret Files
+.env
+
+# Virtual Environments
+.venv
+venv
+/env/
+
+# Python specific cache and compiled files
+__pycache__/
+*.pyc
+
+# IDE specific files (Visual Studio Code, etc.)
+.vscode/
+
+# Docker Volumes/Local Data (If created directly in the project)
+mysql_data
