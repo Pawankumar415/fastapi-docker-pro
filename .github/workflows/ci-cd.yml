@@ -13,6 +13,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # ✅ Create .env file only with DATABASE_URL
+      - name: Create .env file from GitHub Secrets
+        run: |
+          echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >> .env
+
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
@@ -29,5 +34,5 @@ jobs:
             ${{ secrets.DOCKER_USERNAME }}/fastapi-app:${{ github.sha }}
 
       - name: Confirm
-        run: echo "Docker image successfully built and pushed!"
+        run: echo "✅ Docker image successfully built and pushed!"
 
