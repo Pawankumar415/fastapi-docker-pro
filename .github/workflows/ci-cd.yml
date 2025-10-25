@@ -47,6 +47,10 @@ jobs:
     # Since you configured your runner with the default 'self-hosted' label, we will use that.
     runs-on: self-hosted
     needs: [build_and_push_image] # Waits for Job 1 to finish
+    defaults:
+      run:
+        shell: bash
+        working-directory: "/mnt/d/bhavan kumar/docker_practice"
 
     steps:
       - name: Checkout code (on the self-hosted runner)
@@ -55,14 +59,12 @@ jobs:
       # ⚠️ IMPORTANT: Create .env file with DATABASE_URL for the running container
       # This .env file will be used by docker-compose to set the runtime environment variables.
       - name: Create runtime .env file
-        shell: bash
         run: |
           echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" > .env
           echo "MYSQL_ROOT_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }}" >> .env
           echo "MYSQL_DATABASE=${{ secrets.MYSQL_DATABASE }}" >> .env
 
       - name: Pull and Recreate Containers
-        shell: bash
         # We use 'pull' to ensure we get the latest image pushed by Job 1.
         # We use '--force-recreate' to guarantee the container restarts with the new image.
         run: |
