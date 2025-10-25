@@ -18,7 +18,7 @@ services:
       timeout: 5s
 
   fastapi:
-    build: .
+    image: pawan415/fastapi-app:latest 
     container_name: fastapi-app
     ports:
       - "8003:8000"

@@ -6,6 +6,7 @@ on:
       - main
 
 jobs:
+  # Job 1: Builds the FastAPI image and pushes it to Docker Hub
   build_and_push_image:
     runs-on: ubuntu-latest
 
@@ -13,9 +14,11 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # ✅ Create .env file only with DATABASE_URL
+      # 🟢 FIX: Create .env file with ALL necessary secrets for the build environment
       - name: Create .env file from GitHub Secrets
         run: |
+          echo "MYSQL_ROOT_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }}" >> .env
+          echo "MYSQL_DATABASE=${{ secrets.MYSQL_DATABASE }}" >> .env
           echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >> .env
 
       - name: Log in to Docker Hub
@@ -33,6 +36,6 @@ jobs:
             ${{ secrets.DOCKER_USERNAME }}/fastapi-app:latest
             ${{ secrets.DOCKER_USERNAME }}/fastapi-app:${{ github.sha }}
 
-      - name: Confirm
+      - name: Confirm Build and Push
         run: echo "✅ Docker image successfully built and pushed!"
 
