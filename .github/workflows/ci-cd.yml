@@ -6,7 +6,7 @@ on:
       - main
 
 jobs:
-  # Job 1: Builds the FastAPI image and pushes it to Docker Hub (Continuous Integration)
+  # ✅ Job 1 – Build & Push Image to Docker Hub (CI)
   build_and_push_image:
     runs-on: ubuntu-latest
     steps:
@@ -15,7 +15,6 @@ jobs:
 
       - name: Create .env file from GitHub Secrets (CI)
         run: |
-          # These secrets are used by the Dockerfile during the build phase if needed.
           echo "MYSQL_ROOT_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }}" >> .env
           echo "MYSQL_DATABASE=${{ secrets.MYSQL_DATABASE }}" >> .env
           echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >> .env
@@ -38,45 +37,39 @@ jobs:
       - name: Confirm Build and Push
         run: echo "✅ Docker image successfully built and pushed!"
 
-  # ---------------------------------------------------------------------
-  # Job 2: Deploys the latest image to the local server (Continuous Deployment)
-  # ---------------------------------------------------------------------
+  # ✅ Job 2 – Deploy locally on self-hosted runner (CD)
   deploy_to_local:
     runs-on: self-hosted
-    needs: [build_and_push_image] # Waits for Job 1 to finish
-    
-    steps:
-      # Use a plain checkout without 'path' to utilize the default runner path
-      - name: Checkout code (on the self-hosted runner)
-        uses: actions/checkout@v4
-        
-      # 💥 DEBUG STEP: Find out the exact working path and shell
-      - name: Debug Working Directory
+    needs: [build_and_push_image]
+
+    # ✅ Important: Make sure all commands run in correct folder even if it has spaces
+    defaults:
+      run:
         shell: bash
+        working-directory: ${{ github.workspace }}
+
+    steps:
+      - name: Checkout code (on self-hosted runner)
+        uses: actions/checkout@v4
+
+      - name: Debug - Show working directory
         run: |
           echo "Current directory: $(pwd)"
-          echo "GITHUB_WORKSPACE: $GITHUB_WORKSPACE"
-          
-      # ⚠️ FINAL FIX: Use the full $GITHUB_WORKSPACE path inside quotes to handle spaces.
-      - name: Create runtime .env file
-        shell: bash
-        run: |
-          # The Runner's current path is $GITHUB_WORKSPACE, which includes the problematic 'bhavan kumar' folder.
-          # We write the .env file directly to the correct path, ensuring the path is quoted.
-          # We use single quotes (') around the path to prevent shell expansion issues.
-          echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" > '$GITHUB_WORKSPACE/.env'
-          echo "MYSQL_ROOT_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }}" >> '$GITHUB_WORKSPACE/.env'
-          echo "MYSQL_DATABASE=${{ secrets.MYSQL_DATABASE }}" >> '$GITHUB_WORKSPACE/.env'
+          echo "Workspace: $GITHUB_WORKSPACE"
 
+      - name: Create runtime .env file
+        run: |
+          echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" > .env
+          echo "MYSQL_ROOT_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }}" >> .env
+          echo "MYSQL_DATABASE=${{ secrets.MYSQL_DATABASE }}" >> .env
+          echo "✅ .env created at $(pwd)"
 
       - name: Pull and Recreate Containers
-        shell: bash
         run: |
-          echo "Pulling latest image and deploying..."
-          # Pass the full, quoted path explicitly to docker-compose
-          docker-compose -f '$GITHUB_WORKSPACE/docker-compose.yml' pull
-          docker-compose -f '$GITHUB_WORKSPACE/docker-compose.yml' up -d --force-recreate
+          echo "🚀 Pulling latest images and deploying..."
+          docker-compose pull
+          docker-compose up -d --force-recreate
 
       - name: Deployment Confirmed
-        run: echo "🎉 Deployment successful! Containers have been restarted."
+        run: echo "🎉 Deployment successful! Latest container is running."
 
