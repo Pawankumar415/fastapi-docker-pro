@@ -46,30 +46,36 @@ jobs:
     needs: [build_and_push_image] # Waits for Job 1 to finish
     
     steps:
-      # 💥 CRITICAL FIX: Clone the repository into a simple, single-word folder name 'repo'.
-      # This completely bypasses the space issue in '/mnt/d/bhavan kumar/docker_practice/'.
-      - name: Checkout code into 'repo' directory
+      # Use a plain checkout without 'path' to utilize the default runner path
+      - name: Checkout code (on the self-hosted runner)
         uses: actions/checkout@v4
-        with:
-          path: repo # <-- கோட் இந்த 'repo' ஃபோல்டருக்குள் செல்லும்.
         
-      # ⚠️ IMPORTANT: Now all subsequent commands MUST run from within the 'repo' directory.
-      # We use 'working-directory' for this which is the most robust solution.
+      # 💥 DEBUG STEP: Find out the exact working path and shell
+      - name: Debug Working Directory
+        shell: bash
+        run: |
+          echo "Current directory: $(pwd)"
+          echo "GITHUB_WORKSPACE: $GITHUB_WORKSPACE"
+          
+      # ⚠️ FINAL FIX: Use the full $GITHUB_WORKSPACE path inside quotes to handle spaces.
       - name: Create runtime .env file
         shell: bash
-        working-directory: ./repo # <-- புதிய மாற்றம்
         run: |
-          echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" > .env
-          echo "MYSQL_ROOT_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }}" >> .env
-          echo "MYSQL_DATABASE=${{ secrets.MYSQL_DATABASE }}" >> .env
+          # The Runner's current path is $GITHUB_WORKSPACE, which includes the problematic 'bhavan kumar' folder.
+          # We write the .env file directly to the correct path, ensuring the path is quoted.
+          # We use single quotes (') around the path to prevent shell expansion issues.
+          echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" > '$GITHUB_WORKSPACE/.env'
+          echo "MYSQL_ROOT_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }}" >> '$GITHUB_WORKSPACE/.env'
+          echo "MYSQL_DATABASE=${{ secrets.MYSQL_DATABASE }}" >> '$GITHUB_WORKSPACE/.env'
+
 
       - name: Pull and Recreate Containers
         shell: bash
-        working-directory: ./repo # <-- புதிய மாற்றம்
         run: |
           echo "Pulling latest image and deploying..."
-          docker-compose pull
-          docker-compose up -d --force-recreate
+          # Pass the full, quoted path explicitly to docker-compose
+          docker-compose -f '$GITHUB_WORKSPACE/docker-compose.yml' pull
+          docker-compose -f '$GITHUB_WORKSPACE/docker-compose.yml' up -d --force-recreate
 
       - name: Deployment Confirmed
         run: echo "🎉 Deployment successful! Containers have been restarted."
