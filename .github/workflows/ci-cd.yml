@@ -45,15 +45,19 @@ jobs:
     runs-on: self-hosted
     needs: [build_and_push_image] # Waits for Job 1 to finish
     
-    # 💥 CRITICAL FIX: The entire 'defaults' section is removed as it was causing the path error.
-    
     steps:
-      - name: Checkout code (on the self-hosted runner)
+      # 💥 CRITICAL FIX: Clone the repository into a simple, single-word folder name 'repo'.
+      # This completely bypasses the space issue in '/mnt/d/bhavan kumar/docker_practice/'.
+      - name: Checkout code into 'repo' directory
         uses: actions/checkout@v4
+        with:
+          path: repo # <-- கோட் இந்த 'repo' ஃபோல்டருக்குள் செல்லும்.
         
-      # ⚠️ IMPORTANT: Add 'shell: bash' to the run steps to handle spaces in the repository path.
+      # ⚠️ IMPORTANT: Now all subsequent commands MUST run from within the 'repo' directory.
+      # We use 'working-directory' for this which is the most robust solution.
       - name: Create runtime .env file
         shell: bash
+        working-directory: ./repo # <-- புதிய மாற்றம்
         run: |
           echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" > .env
           echo "MYSQL_ROOT_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }}" >> .env
@@ -61,6 +65,7 @@ jobs:
 
       - name: Pull and Recreate Containers
         shell: bash
+        working-directory: ./repo # <-- புதிய மாற்றம்
         run: |
           echo "Pulling latest image and deploying..."
           docker-compose pull
