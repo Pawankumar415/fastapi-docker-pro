@@ -1,4 +1,4 @@
-name: Docker Build and Push CI
+name: Docker Build and Push CI/CD
 
 on:
   push:
@@ -6,10 +6,9 @@ on:
       - main
 
 jobs:
-  # Job 1: Builds the FastAPI image and pushes it to Docker Hub
+  # Job 1: Builds the FastAPI image and pushes it to Docker Hub (Continuous Integration)
   build_and_push_image:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -17,6 +16,7 @@ jobs:
       # 🟢 FIX: Create .env file with ALL necessary secrets for the build environment
       - name: Create .env file from GitHub Secrets
         run: |
+          # These secrets are used by the Dockerfile during the build phase if needed.
           echo "MYSQL_ROOT_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }}" >> .env
           echo "MYSQL_DATABASE=${{ secrets.MYSQL_DATABASE }}" >> .env
           echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" >> .env
@@ -38,4 +38,36 @@ jobs:
 
       - name: Confirm Build and Push
         run: echo "✅ Docker image successfully built and pushed!"
+
+  # ---------------------------------------------------------------------
+  # Job 2: Deploys the latest image to the local server (Continuous Deployment)
+  # ---------------------------------------------------------------------
+  deploy_to_local:
+    # ⚠️ IMPORTANT: The 'self-hosted' label must match the label you gave your runner (e.g., wsl-deploy-runner).
+    # Since you configured your runner with the default 'self-hosted' label, we will use that.
+    runs-on: self-hosted
+    needs: [build_and_push_image] # Waits for Job 1 to finish
+
+    steps:
+      - name: Checkout code (on the self-hosted runner)
+        uses: actions/checkout@v4
+        
+      # ⚠️ IMPORTANT: Create .env file with DATABASE_URL for the running container
+      # This .env file will be used by docker-compose to set the runtime environment variables.
+      - name: Create runtime .env file
+        run: |
+          echo "DATABASE_URL=${{ secrets.DATABASE_URL }}" > .env
+          echo "MYSQL_ROOT_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }}" >> .env
+          echo "MYSQL_DATABASE=${{ secrets.MYSQL_DATABASE }}" >> .env
+
+      - name: Pull and Recreate Containers
+        # We use 'pull' to ensure we get the latest image pushed by Job 1.
+        # We use '--force-recreate' to guarantee the container restarts with the new image.
+        run: |
+          echo "Pulling latest image and deploying..."
+          docker-compose pull
+          docker-compose up -d --force-recreate
+
+      - name: Deployment Confirmed
+        run: echo "🎉 Deployment successful! Containers have been restarted."
 

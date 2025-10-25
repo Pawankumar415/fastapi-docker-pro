@@ -15,3 +15,5 @@ __pycache__/
 
 # Docker Volumes/Local Data (If created directly in the project)
 mysql_data
+
+actions-runner/
