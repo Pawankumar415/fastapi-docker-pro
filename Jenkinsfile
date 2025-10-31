@@ -5,7 +5,7 @@ pipeline {
         MYSQL_ROOT_PASSWORD = credentials('mysql-root-pass')
         MYSQL_DATABASE = credentials('mysql-db-name')
         DATABASE_URL = credentials('database-url')
-        DOCKERHUB_USR = 'pawan415'  // ⚠️ replace with your Docker Hub username
+        DOCKERHUB_USR = ''  // ⚠️ replace with your Docker Hub username
     }
 
     stages {
@@ -14,7 +14,7 @@ pipeline {
             steps {
                 echo '🌀 Fetching latest code from GitHub...'
                 git branch: 'main',
-                    url: 'https://github.com/Pawankumar415/fastapi-docker-pro.git'
+                    url: ''
             }
         }
 
